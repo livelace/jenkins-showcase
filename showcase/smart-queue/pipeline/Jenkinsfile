@@ -79,7 +79,7 @@ properties([
                     [$class: 'org.biouno.unochoice.model.ScriptlerScriptParameter', name: 'NODE', value: '${NODE}'],
                     [$class: 'org.biouno.unochoice.model.ScriptlerScriptParameter', name: 'TYPE', value: 'stat']
                 ],
-                scriptlerScriptId: 'showcase_smart_queue.groovy'
+                scriptlerScriptId: 'smart_queue.groovy'
             ]
         ],
         separator(name: 'separator-963609b8-ce70-45ab-8a61-ff6a77f51a42'),

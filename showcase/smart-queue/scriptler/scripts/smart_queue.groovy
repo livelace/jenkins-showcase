@@ -10,7 +10,7 @@
 
 import org.yaml.snakeyaml.Yaml
 
-def BASE_PATH = "/var/jenkins_home/showcase/config"
+def BASE_PATH = "/var/jenkins_home/showcase/smart-queue/config"
 def NODE_FILE = "${BASE_PATH}/node.yaml"
 
 def RESULT
