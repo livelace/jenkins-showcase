@@ -192,7 +192,7 @@ static boolean pragmaticStrategy(id, activeLease, waitLease, node, cpu, gpu, tim
 node("master") {
     // ------------------------------------------------------------------------
     // State vars.
-    def BASE_PATH = "/var/jenkins_home/showcase/config"
+    def BASE_PATH = "/var/jenkins_home/showcase/smart-queue/config"
 
     def ACTIVE_LEASE_LOCK = "${env.NODE}_active"
     def ACTIVE_LEASE_FILE = "${BASE_PATH}/${ACTIVE_LEASE_LOCK}.yaml"
