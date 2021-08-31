@@ -2,6 +2,11 @@
 
 ![smart-queue](../../assets/smart-queue.png)
 
+### Requirements:
+
+1. Linux
+2. Docker
+
 ### Quick start:
 
 1. Pull repo.
