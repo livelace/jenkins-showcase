@@ -1,0 +1,25 @@
+<?xml version='1.1' encoding='UTF-8'?>
+<scriptler plugin="scriptler@3.3">
+  <scriptSet class="sorted-set">
+    <comparator class="org.jvnet.hudson.plugins.scriptler.util.ByNameSorter"/>
+    <script>
+      <id>smart_queue.groovy</id>
+      <name>smart_queue</name>
+      <comment>showcase smart_queue project</comment>
+      <parameters>
+        <parameter>
+          <name>NODE</name>
+        </parameter>
+        <parameter>
+          <name>TYPE</name>
+        </parameter>
+      </parameters>
+      <available>true</available>
+      <nonAdministerUsing>false</nonAdministerUsing>
+      <onlyMaster>false</onlyMaster>
+    </script>
+  </scriptSet>
+  <disbableRemoteCatalog>false</disbableRemoteCatalog>
+  <allowRunScriptPermission>false</allowRunScriptPermission>
+  <allowRunScriptEdit>false</allowRunScriptEdit>
+</scriptler>

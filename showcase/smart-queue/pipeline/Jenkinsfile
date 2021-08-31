@@ -1,0 +1,343 @@
+properties([
+    parameters([
+        separator(name: 'separator-963609b8-ce70-45ab-8a61-ff6a77f51a42'),
+        string(defaultValue: 'none', name: 'DESCRIPTION'),
+        choice(choices: ['lucky', 'order', 'pragmatic'], name: 'STRATEGY', description: """
+        <b>lucky:</b> builds concurrently check available resources, the luckiest will run sooner than others. <br>
+        <b>order:</b> builds allocate resources one after another, according to launch order. <br>
+        <b>pragmatic:</b> build checks if other builds with same resources can finish their work more quickly. <br>
+        """),
+        string(defaultValue: '1h', name: 'TIMEFRAME', description: """
+        <b>valid:</b> 1m - minutes, 1h - hours, 1d - days, 1w - weeks. <b>invalid:</b> 1d12h.
+        """),
+        separator(name: 'separator-963609b8-ce70-45ab-8a61-ff6a77f51a41'),
+        [
+            $class: 'CascadeChoiceParameter',
+            choiceType: 'PT_SINGLE_SELECT',
+            description: null,
+            filterLength: 1,
+            filterable: false,
+            name: 'NODE',
+            randomName: 'choice-parameter-801232281308866',
+            referencedParameters: '',
+            script: [
+                $class: 'ScriptlerScript',
+                parameters: [
+                    [$class: 'org.biouno.unochoice.model.ScriptlerScriptParameter', name: 'NODE', value: 'any'],
+                    [$class: 'org.biouno.unochoice.model.ScriptlerScriptParameter', name: 'TYPE', value: 'node']
+                ],
+                scriptlerScriptId: 'smart_queue.groovy'
+            ]
+        ],
+        [
+            $class: 'CascadeChoiceParameter',
+            choiceType: 'PT_SINGLE_SELECT',
+            description: null,
+            filterLength: 1,
+            filterable: true,
+            name: 'CPU',
+            randomName: 'choice-parameter-801232281308861',
+            referencedParameters: 'NODE',
+            script: [
+                $class: 'ScriptlerScript',
+                parameters: [
+                    [$class: 'org.biouno.unochoice.model.ScriptlerScriptParameter', name: 'NODE', value: '${NODE}'],
+                    [$class: 'org.biouno.unochoice.model.ScriptlerScriptParameter', name: 'TYPE', value: 'cpu']
+                ],
+                scriptlerScriptId: 'smart_queue.groovy'
+            ]
+        ],
+        [
+            $class: 'CascadeChoiceParameter',
+            choiceType: 'PT_CHECKBOX',
+            description: null,
+            filterLength: 1,
+            filterable: false,
+            name: 'GPU',
+            randomName: 'choice-parameter-513354354388582',
+            referencedParameters: 'NODE',
+            script: [
+                $class: 'ScriptlerScript',
+                parameters: [
+                    [$class: 'org.biouno.unochoice.model.ScriptlerScriptParameter', name: 'NODE', value: '${NODE}'],
+                    [$class: 'org.biouno.unochoice.model.ScriptlerScriptParameter', name: 'TYPE', value: 'gpu']
+                ],
+                scriptlerScriptId: 'smart_queue.groovy'
+            ]
+        ],
+        [
+            $class: 'DynamicReferenceParameter',
+            choiceType: 'ET_FORMATTED_HTML',
+            description: null,
+            omitValueField: false,
+            name: '',
+            randomName: 'choice-parameter-513314324488576',
+            referencedParameters: 'NODE',
+            script: [
+                $class: 'ScriptlerScript',
+                parameters: [
+                    [$class: 'org.biouno.unochoice.model.ScriptlerScriptParameter', name: 'NODE', value: '${NODE}'],
+                    [$class: 'org.biouno.unochoice.model.ScriptlerScriptParameter', name: 'TYPE', value: 'stat']
+                ],
+                scriptlerScriptId: 'showcase_smart_queue.groovy'
+            ]
+        ],
+        separator(name: 'separator-963609b8-ce70-45ab-8a61-ff6a77f51a42'),
+        text(defaultValue: 'echo docker run -ti --rm --cpu $CPU --gpus $GPU nvidia/cuda:11.0-base nvidia-smi', name: 'EXECUTION', description: """
+        <b>environment variables</b>: CPU, GPU. <br> 
+        """),
+        separator(name: 'separator-963609b8-ce70-45ab-8a61-ff6a77f51a43')
+    ])])
+
+// ----------------------------------------------------------------------------
+// Helper functions.
+
+static Integer timeframeToSeconds(time) {
+    def seconds = 0
+
+    if (time.endsWith("m")) {
+        seconds = time.find("[0-9]+").toInteger() * 60
+
+    } else if (time.endsWith("h")) {
+        seconds = time.find("[0-9]+").toInteger() * 60 * 60
+
+    } else if (time.endsWith("d")) {
+        seconds = time.find("[0-9]+").toInteger() * 24 * 60 * 60
+
+    } else if (time.endsWith("w")) {
+        seconds = time.find("[0-9]+").toInteger() * 7 * 24 * 60 * 60
+    }
+
+    return seconds
+}
+
+static boolean checkNodeResources(lease, node, cpu, gpu) {
+    def result = true
+
+    def cpu_used = 0
+    def gpu_used = [:]
+
+    // inspect already allocated resources.
+    lease.each { l ->
+        cpu_used += l.hardware.cpu
+        l.hardware.gpu.each { g ->
+            gpu_used[g.id] = true
+        }
+    }
+
+    // check cpu limits.
+    cpu_used + cpu > node.hardware.cpu ? result = false : null
+
+    // check gpu limits.
+    gpu_used.each { id,_ ->
+        gpu.contains(id) ? result = false : null
+    }
+
+    return result
+}
+
+// ----------------------------------------------------------------------------
+// Strategies functions.
+
+static boolean luckyStrategy(activeLease, node, cpu, gpu) {
+    return checkNodeResources(activeLease, node, cpu, gpu)
+}
+
+static boolean orderStrategy(id, activeLease, waitLease, node, cpu, gpu) {
+    if (checkNodeResources(activeLease, node, cpu, gpu)) {
+        def wait_lease_ids = waitLease.collect() { it.id }.sort()
+        return id <= wait_lease_ids[0]
+    } else {
+        return false
+    }
+}
+
+static boolean pragmaticStrategy(id, activeLease, waitLease, node, cpu, gpu, timeframeSeconds) {
+    if (checkNodeResources(activeLease, node, cpu, gpu)) {
+        def candidates_seconds = 0
+
+        waitLease.each { lease ->
+            if (lease.id != id) {
+                def lease_cpu = lease.hardware.cpu
+                def lease_gpu = lease.hardware.gpu.collect() { it.id }
+                def lease_seconds = timeframeToSeconds(lease.timeframe)
+
+                // Count similar builds which can be fulfilled much faster.
+                if (lease_cpu <= cpu && lease_gpu.any { gpu.contains(it) } && timeframeSeconds / lease_seconds >= 2) {
+                    candidates_seconds += timeframeToSeconds(lease.timeframe)
+                }
+            }
+        }
+
+        // 1. Occupy resources if: there are no candidates or their overall timeframe is longer than current build.
+        // 2. Delay execution if: there are appropriate candidates and their overall timeframe is less than current build.
+        if (candidates_seconds == 0 || candidates_seconds > timeframeSeconds) {
+            return true
+
+        } else if (candidates_seconds > 0 && candidates_seconds < timeframeSeconds) {
+            return false
+        }
+
+    } else {
+        return false
+    }
+}
+
+
+node("master") {
+    // ------------------------------------------------------------------------
+    // State vars.
+    def BASE_PATH = "/var/jenkins_home/showcase/config"
+
+    def ACTIVE_LEASE_LOCK = "${env.NODE}_active"
+    def ACTIVE_LEASE_FILE = "${BASE_PATH}/${ACTIVE_LEASE_LOCK}.yaml"
+
+    def WAIT_LEASE_LOCK = "${env.NODE}_wait"
+    def WAIT_LEASE_FILE = "${BASE_PATH}/${WAIT_LEASE_LOCK}.yaml"
+
+    def NODE_FILE = "${BASE_PATH}/node.yaml"
+
+    // ------------------------------------------------------------------------
+    // Project vars.
+    def BUILD_NUMBER = env.BUILD_NUMBER.toInteger()
+    def BUILD_USER_ID = wrap([$class: 'BuildUser']) { env.BUILD_USER_ID }
+    def DESCRIPTION = env.DESCRIPTION
+    def STRATEGY = env.STRATEGY
+    def TIMEFRAME = env.TIMEFRAME
+    def TIMEFRAME_SECONDS = timeframeToSeconds(TIMEFRAME)
+    def NODE = env.NODE
+    def CPU = env.CPU.toInteger()
+    def GPU_IDS = env.GPU ? env.GPU.split(",").collect() { it.toInteger() } : []
+    def EXECUTION = env.EXECUTION
+
+    // ------------------------------------------------------------------------
+    // Node configurations.
+    def nodes = readYaml file: NODE_FILE
+    def node = nodes.find {  it.name == NODE }
+
+    // ------------------------------------------------------------------------
+    // Current lease properties.
+    def CURRENT_LEASE = [:]
+
+    def GPU = []
+    node.hardware.gpu.findAll { GPU_IDS.contains(it.id) }.each { GPU.add(it) }
+
+    def HARDWARE = [:]
+    HARDWARE.cpu = CPU
+    HARDWARE.gpu = GPU
+
+    CURRENT_LEASE.id = BUILD_NUMBER
+    CURRENT_LEASE.node = NODE
+    CURRENT_LEASE.description = DESCRIPTION
+    CURRENT_LEASE.started = (new Date().getTime() / 1000).toInteger() // unix timestamp.
+    CURRENT_LEASE.strategy = STRATEGY
+    CURRENT_LEASE.timeframe = TIMEFRAME
+    CURRENT_LEASE.username = BUILD_USER_ID
+    CURRENT_LEASE.hardware = HARDWARE
+
+    // ------------------------------------------------------------------------
+    // Pipeline.
+    def READY_TO_GO = false
+
+    stage("description") {
+        buildDescription "${BUILD_USER_ID}: ${DESCRIPTION}"
+    }
+
+    stage("resource waiting") {
+        catchError(buildResult: "UNSTABLE", stageResult: "UNSTABLE") {
+            if (! fileExists(WAIT_LEASE_FILE)) {
+                sh "touch ${WAIT_LEASE_FILE}"
+            }
+
+            if (fileExists(ACTIVE_LEASE_FILE)) {
+
+                while (! READY_TO_GO){
+                    lock(ACTIVE_LEASE_LOCK) {
+                        lock(WAIT_LEASE_LOCK) {
+                            def activeLeases  = readYaml file: ACTIVE_LEASE_FILE
+                            def waitLeases    = readYaml file: WAIT_LEASE_FILE
+                            def waitLeasesIds = waitLeases.collect() { it.id }
+
+                            switch (STRATEGY) {
+                                case "lucky":
+                                    READY_TO_GO = luckyStrategy(activeLeases, node, CPU, GPU_IDS)
+                                    break
+
+                                case "order":
+                                    READY_TO_GO = orderStrategy(BUILD_NUMBER, activeLeases, waitLeases, node, CPU, GPU_IDS)
+                                    break
+
+                                case "pragmatic":
+                                    READY_TO_GO = pragmaticStrategy(BUILD_NUMBER, activeLeases, waitLeases, node, CPU, GPU_IDS, TIMEFRAME_SECONDS)
+                                    break
+                            }
+
+                            switch (READY_TO_GO) {
+                                case true:
+                                    activeLeases.add(CURRENT_LEASE)
+                                    writeYaml data: activeLeases, file: ACTIVE_LEASE_FILE, overwrite: true
+                                    waitLeasesIds.contains(BUILD_NUMBER) ? waitLeases.remove(CURRENT_LEASE) : null
+                                    break
+
+                                case false:
+                                    ! waitLeasesIds.contains(BUILD_NUMBER) ? waitLeases.add(CURRENT_LEASE) : null
+                            }
+
+                            writeYaml data: waitLeases, file: WAIT_LEASE_FILE, overwrite: true
+                        }
+                    }
+
+                    ! READY_TO_GO ? sleep(10) : null
+                }
+
+            } else {
+                writeYaml data: [CURRENT_LEASE], file: ACTIVE_LEASE_FILE
+            }
+        }
+    }
+
+    stage("execution") {
+        if (currentBuild.currentResult == "SUCCESS") {
+            catchError(buildResult: "UNSTABLE", stageResult: "UNSTABLE") {
+
+                timeout(time: TIMEFRAME_SECONDS, unit: "SECONDS") {
+                    withEnv(["CPU=${CPU}", "GPU=${env.GPU}"]) {
+                        def remote = [:]
+
+                        remote.name = node.host
+                        remote.allowAnyHosts = true
+                        remote.host = node.host
+                        remote.port = node.port
+                        remote.user = node.user
+                        remote.identityFile = "${BASE_PATH}/${node.key}"
+
+                        timestamps {
+                            ansiColor("xterm") {
+                                sshCommand remote: remote, command: EXECUTION
+                            }
+                        }
+                    }
+                }
+
+            }
+        }
+    }
+
+    stage("cleanup") {
+        lock(ACTIVE_LEASE_LOCK) {
+            lock(WAIT_LEASE_LOCK) {
+                def activeLeases  = readYaml file: ACTIVE_LEASE_FILE
+                def waitLeases    = readYaml file: WAIT_LEASE_FILE
+
+                def activeLeasesIds = activeLeases.collect() { it.id }
+                def waitLeasesIds = waitLeases.collect() { it.id }
+
+                activeLeasesIds.contains(BUILD_NUMBER) ? activeLeases.remove(CURRENT_LEASE) : null
+                waitLeasesIds.contains(BUILD_NUMBER) ? waitLeases.remove(CURRENT_LEASE) : null
+
+                writeYaml data: activeLeases, file: ACTIVE_LEASE_FILE, overwrite: true
+                writeYaml data: waitLeases, file: WAIT_LEASE_FILE, overwrite: true
+            }
+        }
+    }
+}

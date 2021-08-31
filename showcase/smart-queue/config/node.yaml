@@ -1,0 +1,16 @@
+- name: "host1"
+  host: "1.1.1.1"
+  port: 22
+  user: "user"
+  key: "secret.key"
+
+  hardware:
+    cpu: 128
+    gpu:
+      - id: 1
+        name: "RTX 3090"
+        slot: "00:02.0"
+
+      - id: 2
+        name: "RTX 2080Ti"
+        slot: "00:03.0"

@@ -1,0 +1,51 @@
+jenkins:
+  systemMessage: "Jenkins showcases. Don't use in production!\n\n"
+  numExecutors: 5
+  scmCheckoutRetryCount: 2
+  mode: NORMAL
+
+  authorizationStrategy:
+    loggedInUsersCanDoAnything:
+      allowAnonymousRead: false
+
+  disabledAdministrativeMonitors:
+    - "com.cloudbees.jenkins.plugins.kubernetes_credentials_provider.KubernetesCredentialProvider.initialize"
+    - "hudson.model.UpdateCenter$CoreUpdateMonitor"
+    - "jenkins.diagnostics.ControllerExecutorsNoAgents"
+    - "jenkins.diagnostics.RootUrlNotSetMonitor"
+    - "jenkins.security.s2m.MasterKillSwitchWarning"
+    - "jenkins.diagnostics.ControllerExecutorsAgents"
+
+  securityRealm:
+    local:
+      allowsSignup: false
+      users:
+        - id: "admin"
+          password: "admin"
+
+  slaveAgentPort: 50000
+
+security:
+  globalJobDslSecurityConfiguration:
+    useScriptSecurity: false
+
+  sSHD:
+    port: 40022
+
+unclassified:
+  themeManager:
+    disableUserThemes: false
+    theme: "material-indigo"
+
+jobs:
+  - script: >
+      pipelineJob('smart-queue') {
+          definition {
+              cpsScm {
+                  scm {
+                      git('https://github.com/livelace/jenkins-showcase.git')
+                  }
+                  scriptPath('showcase/smart-queue/pipeline/Jenkinsfile')
+              }
+          }
+      }
