@@ -1,7 +1,13 @@
+// Initialize project parameters.
 if (currentBuild.number == 1) {
     println("WARNING: First run detected. Aborting.")
     Jenkins.instance.getItemByFullName(env.JOB_NAME).getBuildByNumber(env.BUILD_NUMBER.toInteger()).doStop()
 }
+
+// Set project description.
+currentBuild.rawBuild.project.description = """
+<h2>Project is intended for running builds inside custom queues which share arbitrary resources.</h2>
+"""
 
 properties([
     parameters([
@@ -174,8 +180,8 @@ static boolean pragmaticStrategy(id, activeLease, waitLease, node, cpu, gpu, tim
             }
         }
 
-        // 1. Occupy resources if: there are no candidates or their overall timeframe is longer than current build.
-        // 2. Delay execution if: there are appropriate candidates and their overall timeframe is less than current build.
+        // 1. Occupy resources: there are no candidates or their overall timeframe is longer than current build.
+        // 2. Skip execution: there are appropriate candidates and their overall timeframe is less than current build.
         if (candidates_seconds == 0 || candidates_seconds > timeframeSeconds) {
             return true
 
