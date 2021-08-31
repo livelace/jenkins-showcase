@@ -8,9 +8,13 @@
     cpu: 128
     gpu:
       - id: 1
-        name: "RTX 3090"
+        name: "RTX 3090 (overheat)"
         slot: "00:02.0"
 
       - id: 2
-        name: "RTX 2080Ti"
+        name: "RTX 2080Ti (asus)"
         slot: "00:03.0"
+
+      - id: 3
+        name: "RTX 2080Ti (gigabyte)"
+        slot: "00:04.0"

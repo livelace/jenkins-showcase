@@ -1,3 +1,8 @@
+if (currentBuild.number == 1) {
+    println("WARNING: First run detected. Aborting.")
+    Jenkins.instance.getItemByFullName(env.JOB_NAME).getBuildByNumber(env.BUILD_NUMBER.toInteger()).doStop()
+}
+
 properties([
     parameters([
         separator(name: 'separator-963609b8-ce70-45ab-8a61-ff6a77f51a42'),
