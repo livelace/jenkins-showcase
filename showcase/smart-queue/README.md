@@ -27,4 +27,4 @@ cd ..
 ./bootstrap.sh
 ```
 
-5. Login into web-console and run build (first build will be aborted automatically for init purpose).
+5. Login into [http://127.0.0.1:8080](http://127.0.0.1:8080) with **admin:admin** and run build (first build will be aborted automatically for init purpose).

@@ -9,4 +9,5 @@ docker run -ti --rm \
   --volume "${PWD}/config":"/var/jenkins_home/showcase/smart-queue/config" \
   --volume "${PWD}/iac":"/var/jenkins_home/showcase/smart-queue/iac" \
   --volume "${PWD}/scriptler":"/var/jenkins_home/scriptler" \
+  --publish 127.0.0.1:8080:8080 \
   livelace/jenkins:latest
