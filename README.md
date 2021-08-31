@@ -1,4 +1,4 @@
-# Project is intended for running builds inside custom queues and share arbitrary resources.
+## Project is intended for running builds inside custom queues and share arbitrary resources.
 
 ### Quick start:
 
