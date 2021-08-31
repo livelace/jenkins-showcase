@@ -17,36 +17,29 @@ def RESULT
 
 def parser = new Yaml()
 def nodes = parser.load((NODE_FILE as File).text)
+def node = nodes.find { it.name == NODE }
 
 switch (TYPE) {
     case "cpu":
         RESULT = []
 
-        nodes.find { it.name == NODE }.hardware.cpu.times { core ->
-            RESULT.add(core + 1)
-        }
+        node ? node.hardware.cpu.times { RESULT.add(it + 1) } : null
         break
 
     case "gpu":
         RESULT = [:]
 
-        nodes.find { it.name == NODE }.hardware.gpu.each { gpu ->
-            RESULT[gpu.id] = gpu.name
-        }
+        node ? node.hardware.gpu.each { RESULT[it.id] = it.name } : null
         break
 
     case "node":
         RESULT = []
 
-        nodes.each {
-            RESULT.add(it.name)
-        }
+        nodes.each { RESULT.add(it.name) }
         break
 
     case "stat":
         try {
-            def node = nodes.find { it.name == NODE }
-
             def active_lease_file = "${BASE_PATH}/${NODE}_active.yaml"
             def wait_lease_file = "${BASE_PATH}/${NODE}_wait.yaml"
 
