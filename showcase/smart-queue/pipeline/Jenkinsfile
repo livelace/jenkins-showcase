@@ -6,7 +6,7 @@ if (currentBuild.number == 1) {
 
 // Set project description.
 currentBuild.rawBuild.project.description = """
-<h2>Project is intended for running builds inside custom queues which share arbitrary resources.</h2>
+<h3>Project is intended for running builds inside custom queues and share arbitrary resources.</h3>
 """
 
 properties([
