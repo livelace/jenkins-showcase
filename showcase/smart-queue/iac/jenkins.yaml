@@ -9,10 +9,12 @@ jenkins:
       allowAnonymousRead: false
 
   disabledAdministrativeMonitors:
+    - "jenkins.security.csrf.CSRFAdministrativeMonitor"
     - "com.cloudbees.jenkins.plugins.kubernetes_credentials_provider.KubernetesCredentialProvider.initialize"
     - "hudson.model.UpdateCenter$CoreUpdateMonitor"
     - "jenkins.diagnostics.ControllerExecutorsNoAgents"
     - "jenkins.diagnostics.RootUrlNotSetMonitor"
+    - "jenkins.security.UpdateSiteWarningsMonitor"
     - "jenkins.security.s2m.MasterKillSwitchWarning"
     - "jenkins.diagnostics.ControllerExecutorsAgents"
 
