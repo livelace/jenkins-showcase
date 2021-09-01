@@ -1,7 +1,7 @@
 jenkins:
   systemMessage: '<h1>Jenkins showcases. Dont use in production!</h1>'
   numExecutors: 5
-  scmCheckoutRetryCount: 2
+  scmCheckoutRetryCount: 5
   mode: NORMAL
 
   authorizationStrategy:
