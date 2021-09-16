@@ -86,7 +86,7 @@ switch (TYPE) {
             <b>active build:</b> <font color="red">${active_build_total}</font>, <b>active cpu:</b> <font color="red">${active_cpu_total}</font>, <b>active gpu:</b> <font color="red">${active_gpu_total}</font> <br> ${ACTIVE_GPU_STAT} <br><br>
             <b>wait build:</b> <font color="blue">${wait_build_total}</font>, <b>wait cpu:</b> <font color="blue">${wait_cpu_total}</font>, <b>wait gpu:</b> <font color="blue">${wait_gpu_total}</font> <br> ${WAIT_GPU_STAT} <br>
             """
-        } catch (Exception ignored) {
+        } catch (FileNotFoundException ignored) {
             RESULT = "---"
         }
 
