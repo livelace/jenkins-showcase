@@ -10,6 +10,7 @@ docker run -ti --rm \
   --env CASC_JENKINS_CONFIG="$CASC_JENKINS_CONFIG" \
   --env JAVA_OPTS="$JAVA_OPTS" \
   --volume "${PWD}/config:/var/jenkins_home/showcase/smart-queue/config" \
+  --volume "${PWD}/grapes:/var/jenkins_home/.groovy/grapes" \
   --volume "${PWD}/iac:/var/jenkins_home/showcase/smart-queue/iac" \
   --volume "${PWD}/scriptler:/var/jenkins_home/scriptler" \
   --publish "127.0.0.1:8080:8080" \
