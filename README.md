@@ -4,5 +4,6 @@
 <br>
 
 #### Projects: 
-  
-1. [smart-queue](showcase/smart-queue/README.md) - organize queues and share resources.
+
+1. [backbone]() - best practice of jenkins ci/cd organizing. 
+2. [smart-queue](showcase/smart-queue/README.md) - organize queues and share resources.
